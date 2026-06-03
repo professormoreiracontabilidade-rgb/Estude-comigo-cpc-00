@@ -184,19 +184,24 @@ function mostrarRespostaMarcada(qidx, i, animar){
 }
 
 
+
 function salvarAnotacao(){
   try{
     anotacoes[atual] = canvas.toDataURL("image/png");
   }catch(e){}
 }
 
+function apagarCanvasAtual(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
 function carregarAnotacao(){
-  limparCanvas(false);
+  apagarCanvasAtual();
   const imgData = anotacoes[atual];
   if(!imgData) return;
   const img = new Image();
   img.onload = function(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    apagarCanvasAtual();
     ctx.drawImage(img,0,0,canvas.width,canvas.height);
   };
   img.src = imgData;
@@ -219,16 +224,24 @@ function voltar(){
 }
 
 function reiniciar(){
- atual=0; respostas={}; inicioTempo=Date.now(); anotacoes={}; limparCanvas(false); render();
+ atual=0;
+ respostas={};
+ inicioTempo=Date.now();
+ anotacoes={};
+ apagarCanvasAtual();
+ render();
 }
 
 function irRevisarErradas(){
  salvarAnotacao();
  const idx = DATA.slides.findIndex(s=>s.type==="wrongReview");
- if(idx>=0){atual=idx;render();}
+ if(idx>=0){
+   atual=idx;
+   render();
+ }
 }
 
-/* WACOM / CANVAS — tinta fica somente na tela em que foi escrita */
+/* WACOM / CANVAS — cada tela tem sua própria tinta */
 const canvas=document.getElementById("canvasAnotacao");
 const ctx=canvas.getContext("2d");
 let desenhando=false;
@@ -237,19 +250,15 @@ let anotacoes={};
 
 function redimensionarCanvas(){
  const rect=document.getElementById("slide").getBoundingClientRect();
- const oldData = canvas.width && canvas.height ? canvas.toDataURL("image/png") : null;
+
+ // IMPORTANTE:
+ // Não copiamos a tinta antiga para o novo canvas.
+ // Isso evita que a anotação de uma tela vá para outra.
  canvas.width=rect.width;
  canvas.height=rect.height;
+
  ctx.lineCap="round";
  ctx.lineJoin="round";
- if(oldData){
-   const img = new Image();
-   img.onload = function(){
-     ctx.clearRect(0,0,canvas.width,canvas.height);
-     ctx.drawImage(img,0,0,canvas.width,canvas.height);
-   };
-   img.src = oldData;
- }
 }
 
 window.addEventListener("resize",()=>{
@@ -273,11 +282,11 @@ function sairCaneta(){
  salvarAnotacao();
  wacomAtiva=false;
  desenhando=false;
- canvas.style.display="block";          // mantém a tinta visível
- canvas.style.pointerEvents="none";     // mas deixa clicar nos botões e alternativas
+ canvas.style.display="block";          // mantém a tinta visível na tela atual
+ canvas.style.pointerEvents="none";     // libera os cliques nas alternativas e botões
  document.getElementById("painelCaneta").style.display="none";
  document.getElementById("dicaCaneta").style.display="none";
- carregarAnotacao();                    // garante que a tinta não suma ao sair
+ carregarAnotacao();                    // recarrega apenas a anotação desta tela
 }
 
 function modoCaneta(){
@@ -292,7 +301,7 @@ function modoBorracha(){
 }
 
 function limparCanvas(salvar=true){
- ctx.clearRect(0,0,canvas.width,canvas.height);
+ apagarCanvasAtual();
  if(salvar) anotacoes[atual] = "";
 }
 
