@@ -67,7 +67,7 @@ button{border:none;border-radius:12px;padding:9px 14px;font-size:16px;font-weigh
 .imgArea{height:calc(100% - 82px);display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;color:#334155;font-size:15px;overflow:hidden;background:#f8fafc}
 .imgArea img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
 .imgBtns{height:44px;display:flex;gap:6px;align-items:center;justify-content:center;background:#e0f2fe}
-.imgBtns button{font-size:13px;padding:7px 9px;background:#0891b2}
+.imgBtns button{font-size:13px;padding:7px 9px;background:#0891b2}.pinImg{background:#ca8a04!important}.painelImagem.fixo{box-shadow:0 0 0 4px #facc15,0 0 18px #0005}
 @media(max-width:700px){
  .painelImagem{right:8px;bottom:58px;width:42%;height:38%}
  .imgTop{font-size:11px;height:30px}.imgArea{font-size:11px;height:calc(100% - 66px)}
@@ -103,6 +103,7 @@ button{border:none;border-radius:12px;padding:9px 14px;font-size:16px;font-weigh
     <div class="imgArea" id="imgArea">Clique em <b>🖼️ Imagem</b><br>para inserir uma figura nesta tela.</div>
     <div class="imgBtns">
       <button onclick="document.getElementById('inputImagem').click()">📷 Trocar</button>
+      <button class="pinImg" onclick="fixarPainelImagem()">📌 Fixar</button>
       <button onclick="removerImagemTela()">🗑️ Remover</button>
     </div>
   </div>
@@ -194,8 +195,7 @@ function render(){
  redimensionarCanvas();
  carregarAnotacao();
  updateStats();
- const painelImg=document.getElementById("painelImagem");
- if(painelImg && painelImg.style.display==="block") renderizarImagemTela();
+ restaurarPainelImagemDaTela();
 }
 
 function responder(qidx, i){
@@ -271,6 +271,8 @@ function reiniciar(){
  inicioTempo=Date.now();
  anotacoes={};
  imagens={};
+ painelImagemAberto={};
+ painelImagemFixo={};
  fecharPainelImagem();
  apagarCanvasAtual();
  render();
@@ -286,15 +288,35 @@ function irRevisarErradas(){
 }
 
 
+
 function abrirPainelImagem(){
   const p=document.getElementById("painelImagem");
   p.style.display="block";
+  painelImagemAberto[atual]=true;
   renderizarImagemTela();
 }
 
 function fecharPainelImagem(){
   const p=document.getElementById("painelImagem");
   if(p) p.style.display="none";
+  painelImagemAberto[atual]=false;
+  // A imagem não é apagada. O botão fechar apenas esconde o painel.
+}
+
+function fixarPainelImagem(){
+  painelImagemFixo[atual]=!painelImagemFixo[atual];
+  painelImagemAberto[atual]=painelImagemFixo[atual] || true;
+  atualizarEstadoPainelImagem();
+}
+
+function atualizarEstadoPainelImagem(){
+  const p=document.getElementById("painelImagem");
+  if(!p) return;
+  if(painelImagemFixo[atual]){
+    p.classList.add("fixo");
+  }else{
+    p.classList.remove("fixo");
+  }
 }
 
 function carregarImagemTela(event){
@@ -302,7 +324,8 @@ function carregarImagemTela(event){
   if(!file) return;
   const reader = new FileReader();
   reader.onload = function(e){
-    imagens[atual]=e.target.result;
+    imagens[atual]=e.target.result;        // imagem salva somente nesta tela
+    painelImagemAberto[atual]=true;
     abrirPainelImagem();
     renderizarImagemTela();
   };
@@ -313,6 +336,7 @@ function carregarImagemTela(event){
 function renderizarImagemTela(){
   const area=document.getElementById("imgArea");
   if(!area) return;
+  atualizarEstadoPainelImagem();
   if(imagens[atual]){
     area.innerHTML=`<img src="${imagens[atual]}" alt="Imagem da tela">`;
   }else{
@@ -325,6 +349,19 @@ function removerImagemTela(){
   renderizarImagemTela();
 }
 
+function restaurarPainelImagemDaTela(){
+  const p=document.getElementById("painelImagem");
+  if(!p) return;
+  // Se a tela tem imagem, o painel fica salvo e reaparece automaticamente ao voltar para ela.
+  // Se foi fixado, também reaparece.
+  if(imagens[atual] || painelImagemFixo[atual] || painelImagemAberto[atual]){
+    p.style.display="block";
+  }else{
+    p.style.display="none";
+  }
+  renderizarImagemTela();
+}
+
 /* WACOM / CANVAS — cores + régua + tinta individual por tela */
 const canvas=document.getElementById("canvasAnotacao");
 const ctx=canvas.getContext("2d");
@@ -332,6 +369,8 @@ let desenhando=false;
 let wacomAtiva=false;
 let anotacoes={};
 let imagens={};
+let painelImagemAberto={};
+let painelImagemFixo={};
 let corAtual="#111827";
 let ferramenta="caneta";
 let inicioLinha=null;
@@ -489,5 +528,3 @@ render();
 </script>
 </body>
 </html>
-
-
